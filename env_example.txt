@@ -1,0 +1,42 @@
+# PERM Application Details
+# Replace with your actual PERM case information
+PERM_CASE_NUMBER=A-12345-67890
+SUBMISSION_DATE=2024-01-15
+EMPLOYER_LETTER=A
+EMPLOYER_NAME=Your Company Name
+
+# Email Configuration
+# Use Gmail App Password (not your regular password)
+SENDER_EMAIL=your-email@gmail.com
+SENDER_PASSWORD=your-app-password
+RECIPIENT_EMAIL=recipient@example.com
+NOTIFICATION_METHOD=email
+
+# SMTP Configuration (optional - defaults to Gmail)
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+
+# Telegram Configuration (for future use)
+# TELEGRAM_BOT_TOKEN=your-bot-token
+# TELEGRAM_CHAT_ID=your-chat-id
+
+# Scraper Configuration
+PERM_UPDATE_URL=https://permupdate.com
+SCRAPER_TIMEOUT=30
+SCRAPER_RETRIES=3
+
+# ETA Estimation Configuration
+DEFAULT_PROCESSING_RATE=50
+CONFIDENCE_HIGH=0.8
+CONFIDENCE_MEDIUM=0.6
+CONFIDENCE_LOW=0.4
+
+# Logging Configuration
+LOG_LEVEL=INFO
+LOG_FILE=perm_tracker.log
+
+# Security Configuration
+ENABLE_MOCK_DATA=false
+MOCK_POSITION=1500
+MOCK_TOTAL_APPLICATIONS=5000
+MOCK_PROCESSING_RATE=50 
