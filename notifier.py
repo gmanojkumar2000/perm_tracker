@@ -9,6 +9,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional, Dict, Any
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +97,7 @@ class EmailNotificationService(NotificationService):
                 <p><strong>Confidence Level:</strong> {eta.get('confidence_level', 'Unknown')}</p>
                 <p><strong>Progress:</strong> {eta.get('progress_percentage', 'Unknown')}%</p>
                 -->
-                <p style='color: #666; font-size: 12px; margin-top: 20px;'>Report generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
+                <p style='color: #666; font-size: 12px; margin-top: 20px;'>Report generated on {(datetime.now(tz=ZoneInfo('America/Los_Angeles')).strftime('%B %d, %Y at %I:%M %p %Z'))}</p>
             </div>
         </body>
         </html>
