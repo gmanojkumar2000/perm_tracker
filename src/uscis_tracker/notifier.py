@@ -1,6 +1,6 @@
 """
 Notifications Module
-Handles email notifications for PERM status updates
+Handles email notifications for USCIS case status updates
 """
 
 import smtplib
@@ -10,6 +10,7 @@ from email.mime.multipart import MIMEMultipart
 from typing import Optional, Dict, Any
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from . import config
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class NotificationService:
     """Base class for notification services"""
     
     def send_status_update(self, case_number: str, status: Dict[str, Any], eta: Dict[str, Any], employer_name: str) -> bool:
-        """Send PERM status update notification"""
+        """Send USCIS case status update notification"""
         raise NotImplementedError
 
 
@@ -45,13 +46,13 @@ class EmailNotificationService(NotificationService):
         try:
             # Create message
             current_status = status.get('status', 'Unknown')
-            subject = f"PERM Status Update – {current_status}"
+            subject = f"Case Status Update – {current_status}"
             body = self._create_email_body(case_number, status, eta, employer_name)
             
             # Create MIME message
             msg = MIMEMultipart()
             # Set display name for sender
-            msg['From'] = f"PERM Tracker Bot <{self.sender_email}>"
+            msg['From'] = f"Case Status Tracker Bot <{self.sender_email}>"
             msg['To'] = ', '.join(self.recipient_emails)
             msg['Subject'] = subject
             
@@ -63,46 +64,105 @@ class EmailNotificationService(NotificationService):
                 server.login(self.sender_email, self.sender_password)
                 server.send_message(msg)
             
-            logger.info(f"PERM status update sent successfully to {len(self.recipient_emails)} recipients: {', '.join(self.recipient_emails)}")
+            logger.info(f"Case status update sent successfully to {len(self.recipient_emails)} recipients: {', '.join(self.recipient_emails)}")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to send PERM status update email: {e}")
+            logger.error(f"Failed to send case status update email: {e}")
             return False
     
     def _create_email_body(self, case_number: str, status: Dict[str, Any], eta: Dict[str, Any], employer_name: str) -> str:
-        """Create HTML email body for PERM status update (approval status only, other details commented)"""
+        """Create HTML email body for USCIS case status update"""
         current_status = status.get('status', 'Unknown')
+        form_type = status.get('form_type', 'Unknown')
+        case_type = status.get('case_type', 'Unknown')
+        
+        # Set status color based on current status
         status_color = '#007bff'  # Default blue
         if 'approved' in current_status.lower():
             status_color = '#28a745'  # Green
         elif 'denied' in current_status.lower():
             status_color = '#dc3545'  # Red
+        elif 'rfe' in current_status.lower() or 'request for evidence' in current_status.lower():
+            status_color = '#fd7e14'  # Orange
         elif 'pending' in current_status.lower():
             status_color = '#ffc107'  # Yellow
+        elif 'received' in current_status.lower():
+            status_color = '#6f42c1'  # Purple
+        
+        # Build status details
+        status_details = f"""
+        <p><strong>Form Type:</strong> {form_type}</p>
+        <p><strong>Case Type:</strong> {case_type}</p>
+        <p><strong>Employer:</strong> {employer_name}</p>
+        <p><strong>Last Updated:</strong> {status.get('last_updated', 'Unknown')}</p>
+        """
+        
+        # Add service center information if available
+        if form_type == 'I-140':
+            service_center = self._extract_service_center_from_case_number(case_number)
+            status_details += f"""
+            <p><strong>Service Center:</strong> {service_center}</p>
+            """
+        
+        # Add details if available
+        details = status.get('details', '')
+        details_section = ""
+        if details and details.strip():
+            details_section = f"""
+            <div style='background-color: #e9ecef; padding: 15px; border-radius: 5px; margin: 15px 0;'>
+                <h4 style='margin-top: 0;'>Case Details:</h4>
+                <p style='margin-bottom: 0;'>{details}</p>
+            </div>
+            """
+        
         html_body = f"""
         <html>
         <body style='font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px;'>
             <div style='background-color: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 5px solid {status_color};'>
-                <h2 style='color: {status_color}; margin-top: 0;'>PERM Status Update – {case_number}</h2>
-                <p style='color: #333; font-size: 1.2em;'><strong>Current Status:</strong> <span style='color: {status_color};'>{current_status}</span></p>
-                <!--
-                <p><strong>Position in Queue:</strong> {status.get('position_in_queue', 'Unknown')} of {status.get('total_applications', 'Unknown')}</p>
-                <p><strong>Processing Rate:</strong> {status.get('processing_rate', 'Unknown')} applications/day</p>
-                <p><strong>Last Processed Date:</strong> {status.get('last_processed_date', 'Unknown')}</p>
-                <p><strong>Employer:</strong> {employer_name}</p>
-                <p><strong>Estimated Processing Date:</strong> {eta.get('estimated_processing_date', 'Unknown')}</p>
-                <p><strong>Estimated Approval Date:</strong> {eta.get('estimated_approval_date', 'Unknown')}</p>
-                <p><strong>Days Remaining:</strong> {eta.get('days_remaining', 'Unknown')} days</p>
-                <p><strong>Confidence Level:</strong> {eta.get('confidence_level', 'Unknown')}</p>
-                <p><strong>Progress:</strong> {eta.get('progress_percentage', 'Unknown')}%</p>
-                -->
-                <p style='color: #666; font-size: 12px; margin-top: 20px;'>Report generated on {(datetime.now(tz=ZoneInfo('America/Los_Angeles')).strftime('%B %d, %Y at %I:%M %p %Z'))}</p>
+                <h2 style='color: {status_color}; margin-top: 0;'>USCIS Case Status Update</h2>
+                <h3 style='color: #333;'>Case Number: {case_number}</h3>
+                
+                <div style='background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0;'>
+                    <h4 style='margin-top: 0; color: {status_color};'>Current Status</h4>
+                    <p style='color: #333; font-size: 1.2em; font-weight: bold;'>{current_status}</p>
+                </div>
+                
+                <div style='background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0;'>
+                    <h4 style='margin-top: 0;'>Case Information</h4>
+                    {status_details}
+                </div>
+                
+                {details_section}
+                
+                <p style='color: #666; font-size: 12px; margin-top: 20px;'>
+                    Report generated on {(datetime.now(tz=ZoneInfo('America/Los_Angeles')).strftime('%B %d, %Y at %I:%M %p %Z'))}
+                </p>
+                
+                <div style='background-color: #e9ecef; padding: 10px; border-radius: 5px; margin-top: 15px; font-size: 12px; color: #666;'>
+                    <strong>Note:</strong> This is an automated status check. For official information, please visit 
+                    <a href='https://egov.uscis.gov/casestatus/mycasestatus.do' target='_blank'>USCIS Case Status</a>.
+                </div>
             </div>
         </body>
         </html>
         """
         return html_body
+    
+    def _extract_service_center_from_case_number(self, case_number: str) -> str:
+        """Extract service center from case number"""
+        if len(case_number) >= 3:
+            prefix = case_number[:3]
+            service_center_mapping = {
+                'YSC': 'Vermont Service Center',
+                'WAC': 'California Service Center',
+                'LIN': 'Nebraska Service Center',
+                'SRC': 'Texas Service Center',
+                'MSC': 'Missouri Service Center',
+                'IOE': 'Electronic Filing',
+            }
+            return service_center_mapping.get(prefix, 'Unknown Service Center')
+        return 'Unknown Service Center'
 
 
 class TelegramNotificationService(NotificationService):

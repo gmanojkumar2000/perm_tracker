@@ -1,4 +1,4 @@
-name: Daily PERM Status Check
+name: Daily USCIS Status Check
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  perm-check:
+  uscis-check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -24,9 +24,8 @@ jobs:
 
       - name: Create .env from secrets
         run: |
-          echo "PERM_CASE_NUMBER=${{ secrets.PERM_CASE_NUMBER }}" >> .env
+          echo "CASE_NUMBER=${{ secrets.CASE_NUMBER }}" >> .env
           echo "SUBMISSION_DATE=${{ secrets.SUBMISSION_DATE }}" >> .env
-          echo "EMPLOYER_LETTER=${{ secrets.EMPLOYER_LETTER }}" >> .env
           echo "EMPLOYER_NAME=${{ secrets.EMPLOYER_NAME }}" >> .env
           echo "SENDER_EMAIL=${{ secrets.SENDER_EMAIL }}" >> .env
           echo "SENDER_PASSWORD=${{ secrets.SENDER_PASSWORD }}" >> .env
@@ -50,12 +49,12 @@ jobs:
           echo "MOCK_TOTAL_APPLICATIONS=${{ secrets.MOCK_TOTAL_APPLICATIONS }}" >> .env
           echo "MOCK_PROCESSING_RATE=${{ secrets.MOCK_PROCESSING_RATE }}" >> .env
 
-      - name: Run PERM tracker script
+      - name: Run USCIS tracker script
         run: python main.py
 
       - name: Upload tracker log
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: daily-perm-log
-          path: perm_tracker.log 
+          name: daily-uscis-log
+          path: uscis_tracker.log 
